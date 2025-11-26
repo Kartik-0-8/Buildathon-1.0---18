@@ -1,38 +1,69 @@
-import { UserProfile } from '../types';
 
-export function computeMatchScore(current: UserProfile, other: UserProfile): number {
+import { StudentProfile, ProfessionalProfile } from '../types';
+
+export function computeMatchScore(current: StudentProfile, other: StudentProfile): number {
   if (!current || !other) return 0;
-  let score = 0, total = 0;
+  let score = 0;
 
-  // 1. Skill Overlap (45%)
-  // Skills are crucial. If they match, great. But often we want complementary skills too.
-  // For this algorithm, we stick to overlap as a proxy for "relevance".
-  total += 45;
+  // 1. Skill Overlap (60%)
   const skillOverlap = other.skills?.filter(s => current.skills?.includes(s)).length || 0;
-  score += (skillOverlap / (current.skills?.length || 1)) * 45;
+  // Prevent division by zero, though a student should have skills
+  const currentSkillsLength = current.skills?.length > 0 ? current.skills.length : 1;
+  score += (skillOverlap / currentSkillsLength) * 60;
 
   // 2. Interest Overlap (25%)
-  // Shared interests keep the team motivated.
-  total += 25;
   const interestOverlap = other.interests?.filter(i => current.interests?.includes(i)).length || 0;
-  score += (interestOverlap / (current.interests?.length || 1)) * 25;
+  const currentInterestsLength = current.interests?.length > 0 ? current.interests.length : 1;
+  score += (interestOverlap / currentInterestsLength) * 25;
 
   // 3. XP/Level Proximity (15%)
-  // Similar experience levels often result in smoother collaboration (peer-to-peer).
-  total += 15;
-  const xpDiff = Math.abs((current.level || 1) - (other.level || 1));
-  score += Math.max(0, 15 - xpDiff * 5);
+  // Logic: 15 - (Difference * 5), clamped at 0.
+  const levelDiff = Math.abs((current.level || 1) - (other.level || 1));
+  score += Math.max(0, 15 - levelDiff * 5);
 
-  // 4. Rating Compatibility (15%) - NEW
-  // Elo/Rating proximity implies similar competitive capability.
-  total += 15;
-  const currentRating = current.rating || 1000;
-  const otherRating = other.rating || 1000;
-  const ratingDiff = Math.abs(currentRating - otherRating);
-  // Max score if within 100 points, decreasing after that.
-  // 500 points diff = 0 score.
-  const ratingScore = Math.max(0, 15 - (ratingDiff / 500) * 15); 
-  score += ratingScore;
+  // Cap at 100
+  return Math.min(100, Math.round(score));
+}
 
-  return Math.min(100, Math.round((score / total) * 100));
+export function computeHiringMatchScore(professional: ProfessionalProfile, student: StudentProfile): number {
+    if (!professional.hiringRequirements) return 0;
+
+    const reqs = professional.hiringRequirements;
+    let score = 0;
+
+    // 1. Skills Match (65%)
+    // Compare student skills against required skills
+    const requiredSkills = reqs.requiredSkills || [];
+    if (requiredSkills.length > 0) {
+        const matches = student.skills.filter(skill => 
+            requiredSkills.some(req => req.toLowerCase() === skill.toLowerCase())
+        ).length;
+        score += (matches / requiredSkills.length) * 65;
+    } else {
+        // If no skills specified, give partial credit? Or 0. Let's give 0 strictly.
+    }
+
+    // 2. Domain Match (20%)
+    // Check if student interests overlap with required domain
+    const domain = reqs.domain?.toLowerCase();
+    if (domain && student.interests.some(i => i.toLowerCase().includes(domain) || domain.includes(i.toLowerCase()))) {
+        score += 20;
+    }
+
+    // 3. XP/Experience Match (15%)
+    // Professional specifies years needed. Student has XP.
+    // Heuristic: 100 XP ~= 1 Year roughly for this logic, or just raw level comparison
+    // Let's assume req.experienceNeeded is Level equivalent for simplicity in this gamified app.
+    const targetLevel = reqs.experienceNeeded || 1; 
+    const studentLevel = student.level || 1;
+    
+    if (studentLevel >= targetLevel) {
+        score += 15;
+    } else {
+        const diff = targetLevel - studentLevel;
+        // Penalize 3 points per level difference
+        score += Math.max(0, 15 - (diff * 3));
+    }
+
+    return Math.min(100, Math.round(score));
 }

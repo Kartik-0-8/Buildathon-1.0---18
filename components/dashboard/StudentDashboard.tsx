@@ -1,29 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchHackathons, fetchStudents, fetchTeamMembers, fetchLeaderboard } from '../../services/data';
-import { generateBio, getAiSuggestions, suggestBadges, getMatchAnalysis } from '../../services/geminiService';
+import { generateBio, suggestBadges, getMatchAnalysis } from '../../services/geminiService';
 import { computeMatchScore } from '../../lib/matchmaking';
-import { Hackathon, UserProfile, MatchResult } from '../../types';
-import { Trophy, Star, Zap, Code, Users, Award, Wand2, RefreshCw, MessageCircle, BarChart2, TrendingUp, Sparkles, X, ChevronRight } from 'lucide-react';
+import { Hackathon, UserProfile, MatchResult, StudentProfile } from '../../types';
+import { Trophy, Star, Zap, Code, Users, Award, Wand2, RefreshCw, MessageCircle, BarChart2, TrendingUp, Sparkles, X, ChevronRight, MapPin, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { TeamSearch } from './TeamSearch';
+import { AICoachChat } from './AICoachChat';
 
 export const StudentDashboard: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'leaderboard' | 'search'>('overview');
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [leaderboard, setLeaderboard] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiSuggestion, setAiSuggestion] = useState<string>('');
+  
   const [generatingBio, setGeneratingBio] = useState(false);
   const [suggestingBadges, setSuggestingBadges] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<Set<string>>(new Set());
   
-  // AI Match Analysis State
+  // AI State
+  const [showAiChat, setShowAiChat] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState<string | null>(null);
   const [matchAnalysis, setMatchAnalysis] = useState<{id: string, text: string} | null>(null);
+
+  // Helper cast for JSX since this dashboard is protected for students
+  const studentUser = user?.role === 'student' ? (user as StudentProfile) : null;
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,16 +47,20 @@ export const StudentDashboard: React.FC = () => {
       if (user && !updatedLb.find(u => u.id === user.id)) {
            updatedLb.push(user);
       }
-      updatedLb.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      updatedLb.sort((a, b) => {
+          const ratingA = a.role === 'student' ? a.rating : 0;
+          const ratingB = b.role === 'student' ? b.rating : 0;
+          return ratingB - ratingA;
+      });
       setLeaderboard(updatedLb);
 
-      if (user) {
-        const allStudents = await fetchStudents();
+      if (user && user.role === 'student') {
+        const allStudents = (await fetchStudents()).filter(u => u.role === 'student') as StudentProfile[];
         const scoredMatches = allStudents
           .filter(u => u.id !== user.id)
           .map(other => ({
             user: other,
-            score: computeMatchScore(user, other)
+            score: computeMatchScore(user as StudentProfile, other)
           }))
           .sort((a, b) => b.score - a.score)
           .slice(0, 4); // Top 4
@@ -62,27 +72,20 @@ export const StudentDashboard: React.FC = () => {
   }, [user]);
 
   const handleGenerateBio = async () => {
-    if (!user) return;
+    if (!studentUser) return;
     setGeneratingBio(true);
-    const newBio = await generateBio(user.skills, user.interests, user.role);
+    const newBio = await generateBio(studentUser.skills, studentUser.interests, studentUser.role);
     updateProfile({ bio: newBio });
     setGeneratingBio(false);
   };
 
   const handleSuggestBadges = async () => {
-    if (!user) return;
+    if (!studentUser) return;
     setSuggestingBadges(true);
-    const newBadges = await suggestBadges(user.skills, user.xp);
-    updateProfile({ badges: [...new Set([...user.badges, ...newBadges])] });
+    const newBadges = await suggestBadges(studentUser.skills, studentUser.xp);
+    updateProfile({ badges: [...new Set([...studentUser.badges, ...newBadges])] });
     setSuggestingBadges(false);
   }
-
-  const handleGetSuggestions = async () => {
-    if (!user) return;
-    setAiSuggestion('Thinking...');
-    const suggestion = await getAiSuggestions(user);
-    setAiSuggestion(suggestion);
-  };
 
   const handleAnalyzeMatch = async (matchUser: UserProfile) => {
     if (!user) return;
@@ -114,14 +117,14 @@ export const StudentDashboard: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{user?.name}</h2>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2 text-sm">
                <span className="bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full font-bold flex items-center">
-                 <Zap size={14} className="mr-1" /> {user?.rating || 1000} Rating
+                 <Zap size={14} className="mr-1" /> {studentUser?.rating || 1000} Rating
                </span>
                {userRank > 0 && (
                    <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full font-bold flex items-center border border-yellow-200 dark:border-yellow-700/50">
                      <Trophy size={14} className="mr-1" /> Global Rank #{userRank}
                    </span>
                )}
-               <span className="text-gray-500 dark:text-gray-400 font-medium ml-1">Lvl {user?.level} • {user?.xp} XP</span>
+               <span className="text-gray-500 dark:text-gray-400 font-medium ml-1">Lvl {studentUser?.level} • {studentUser?.xp} XP</span>
             </div>
             
             <div className="mt-4 max-w-2xl">
@@ -138,7 +141,7 @@ export const StudentDashboard: React.FC = () => {
 
             <div className="mt-4">
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start items-center">
-                    {user?.badges.map((badge, idx) => (
+                    {studentUser?.badges.map((badge, idx) => (
                         <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                         <Award size={12} className="mr-1" />
                         {badge}
@@ -159,34 +162,41 @@ export const StudentDashboard: React.FC = () => {
           <div className="w-full md:w-64 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
              <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-semibold">XP Progress</span>
-                <span className="text-xs text-gray-500">{(user?.xp || 0) % 1000} / 1000</span>
+                <span className="text-xs text-gray-500">{(studentUser?.xp || 0) % 1000} / 1000</span>
              </div>
              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mb-2">
-                <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${((user?.xp || 0) % 1000) / 10}%` }}></div>
+                <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${((studentUser?.xp || 0) % 1000) / 10}%` }}></div>
              </div>
-             <div className="text-xs text-gray-500 text-center">Next Level: {((user?.level || 1) + 1)}</div>
+             <div className="text-xs text-gray-500 text-center">Next Level: {((studentUser?.level || 1) + 1)}</div>
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === 'overview' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${activeTab === 'overview' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
-            Overview & Matches
+            Overview
+        </button>
+        <button 
+            onClick={() => setActiveTab('search')}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 whitespace-nowrap flex items-center ${activeTab === 'search' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        >
+            <Search size={16} className="mr-2" />
+            Find Teammates
         </button>
         <button 
             onClick={() => setActiveTab('leaderboard')}
-            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 flex items-center ${activeTab === 'leaderboard' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 whitespace-nowrap flex items-center ${activeTab === 'leaderboard' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
             <BarChart2 size={16} className="mr-2" />
             Global Leaderboard
         </button>
       </div>
 
-      {activeTab === 'overview' ? (
+      {activeTab === 'overview' && (
         <div className="space-y-8 animate-fade-in">
              {/* Engagement Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -200,7 +210,7 @@ export const StudentDashboard: React.FC = () => {
                             <Code size={20} />
                         </div>
                     </div>
-                    <p className="text-3xl font-bold">2</p>
+                    <p className="text-3xl font-bold">{hackathons.length}</p>
                     <p className="text-sm text-gray-500 mt-1 flex items-center">
                         Registered events <ChevronRight size={14} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity"/>
                     </p>
@@ -224,18 +234,15 @@ export const StudentDashboard: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg flex items-center"><Zap className="mr-2" size={18}/> AI Coach</h3>
                     </div>
-                    {aiSuggestion ? (
-                        <div className="text-sm bg-white/10 p-3 rounded-lg backdrop-blur-sm animate-fade-in">
-                            {aiSuggestion.split('\n').map((line, i) => <p key={i} className="mb-1">{line}</p>)}
-                        </div>
-                    ) : (
-                        <div className="text-center py-4">
-                            <p className="text-sm opacity-90 mb-3">Get personalized tips to level up.</p>
-                            <button onClick={handleGetSuggestions} className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">
-                                Ask AI
-                            </button>
-                        </div>
-                    )}
+                    <div className="text-center py-4">
+                        <p className="text-sm opacity-90 mb-3">Get personalized tips to level up.</p>
+                        <button 
+                            onClick={() => setShowAiChat(true)} 
+                            className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors"
+                        >
+                            Ask AI
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -247,10 +254,14 @@ export const StudentDashboard: React.FC = () => {
                             <Sparkles className="mr-2 text-primary-600" />
                             AI Recommended Matches
                         </h3>
+                        <button onClick={() => setActiveTab('search')} className="text-sm text-primary-600 font-medium hover:underline">
+                            View All
+                        </button>
                     </div>
                    
                     <div className="grid grid-cols-1 gap-4">
                         {matches.map(({ user: matchUser, score }) => {
+                            const matchStudent = matchUser as StudentProfile;
                             const isConnected = connectedUsers.has(matchUser.id);
                             return (
                                 <div key={matchUser.id} className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -265,7 +276,7 @@ export const StudentDashboard: React.FC = () => {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <h4 className="font-bold text-gray-900 dark:text-white text-lg">{matchUser.name}</h4>
-                                                    <p className="text-xs text-primary-600 font-medium mb-1">Rating: {matchUser.rating}</p>
+                                                    <p className="text-xs text-primary-600 font-medium mb-1">Rating: {matchStudent.rating}</p>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button 
@@ -291,7 +302,7 @@ export const StudentDashboard: React.FC = () => {
                                             </div>
                                             <p className="text-sm text-gray-500 mb-2 truncate">{matchUser.bio}</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {matchUser.skills.slice(0, 4).map((skill, i) => (
+                                                {matchStudent.skills?.slice(0, 4).map((skill, i) => (
                                                     <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-xs">
                                                         {skill}
                                                     </span>
@@ -356,9 +367,13 @@ export const StudentDashboard: React.FC = () => {
                                 <img src={hack.image} alt={hack.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                             </div>
                             <div className="p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h4 className="font-bold text-lg leading-tight">{hack.title}</h4>
-                                    <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300 whitespace-nowrap">{hack.date}</span>
+                                <div className="mb-2">
+                                    <h4 className="font-bold text-lg leading-tight mb-1">{hack.title}</h4>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <span className="flex items-center"><MapPin size={12} className="mr-1"/> {hack.location}</span>
+                                        <span>•</span>
+                                        <span>{hack.date}</span>
+                                    </div>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{hack.description}</p>
                                 <button className="w-full py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium rounded-lg text-sm hover:opacity-90">
@@ -370,7 +385,15 @@ export const StudentDashboard: React.FC = () => {
                 </div>
             </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'search' && (
+          <div className="animate-fade-in">
+              <TeamSearch />
+          </div>
+      )}
+
+      {activeTab === 'leaderboard' && (
         <div className="animate-fade-in bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
              <div className="p-6 bg-gradient-to-r from-primary-600 to-purple-600 text-white">
                  <h3 className="text-2xl font-bold flex items-center">
@@ -392,6 +415,7 @@ export const StudentDashboard: React.FC = () => {
                      </thead>
                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                          {leaderboard.map((lbUser, index) => {
+                             const lbStudent = lbUser as StudentProfile;
                              const isCurrentUser = lbUser.id === user?.id;
                              return (
                                 <tr key={lbUser.id} className={`${isCurrentUser ? 'bg-primary-50 dark:bg-primary-900/20 ring-1 ring-inset ring-primary-500/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'} transition-colors`}>
@@ -420,15 +444,15 @@ export const StudentDashboard: React.FC = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center text-primary-600 font-bold">
                                             <Zap size={16} className="mr-1" />
-                                            {lbUser.rating}
+                                            {lbStudent.rating || '-'}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        Lvl {lbUser.level}
+                                        Lvl {lbStudent.level || 1}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex -space-x-1">
-                                            {lbUser.badges.slice(0, 3).map((b, i) => (
+                                            {lbStudent.badges?.slice(0, 3).map((b, i) => (
                                                 <div key={i} title={b} className="w-6 h-6 rounded-full bg-yellow-100 border border-white dark:border-gray-800 flex items-center justify-center text-[10px] text-yellow-800 cursor-help">
                                                     <Award size={12} />
                                                 </div>
@@ -447,6 +471,11 @@ export const StudentDashboard: React.FC = () => {
                  </table>
              </div>
         </div>
+      )}
+
+      {/* AI Chat Modal */}
+      {showAiChat && user && (
+          <AICoachChat user={user} onClose={() => setShowAiChat(false)} />
       )}
     </div>
   );

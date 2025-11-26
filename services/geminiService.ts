@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
-import { UserProfile } from "../types";
+import { UserProfile, StudentProfile } from "../types";
 
 const getClient = () => {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
+        // Fallback for demo purposes if env is missing
         console.warn("Gemini API Key is missing");
         return null;
     }
@@ -75,11 +76,18 @@ export const getMatchAnalysis = async (user1: UserProfile, user2: UserProfile): 
     const ai = getClient();
     if (!ai) return "AI Analysis unavailable without API Key. Based on skills, this looks like a good match.";
 
+    const getProfileDetails = (u: UserProfile) => {
+        if (u.role === 'student') {
+            return `Skills: ${u.skills.join(', ')}, Interests: ${u.interests.join(', ')}, Bio: ${u.bio}, Rating: ${u.rating}`;
+        }
+        return `Bio: ${u.bio}, Role: ${u.role}`;
+    };
+
     try {
         const prompt = `
             Analyze the compatibility of these two students for a hackathon team. 
-            User 1: ${user1.name}, Skills: ${user1.skills.join(', ')}, Interests: ${user1.interests.join(', ')}, Bio: ${user1.bio}, Rating: ${user1.rating}.
-            User 2: ${user2.name}, Skills: ${user2.skills.join(', ')}, Interests: ${user2.interests.join(', ')}, Bio: ${user2.bio}, Rating: ${user2.rating}.
+            User 1: ${user1.name}, ${getProfileDetails(user1)}
+            User 2: ${user2.name}, ${getProfileDetails(user2)}
             
             Provide a 2-sentence analysis on why they would work well together or what challenges they might face. Focus on technical synergy.
         `;
@@ -95,3 +103,32 @@ export const getMatchAnalysis = async (user1: UserProfile, user2: UserProfile): 
         return "Could not perform AI analysis.";
     }
 }
+
+export const getAiChatSession = (userProfile: UserProfile) => {
+    const ai = getClient();
+    // Return a mock object if no AI client
+    if (!ai) return null;
+
+    let details = '';
+    if (userProfile.role === 'student') {
+        details = `
+        Their Skills: ${userProfile.skills.join(', ')}.
+        Their Interests: ${userProfile.interests.join(', ')}.
+        `;
+    }
+
+    const systemInstruction = `You are "Coach X", an enthusiastic and wise AI mentor for a hackathon platform called CollabX. 
+    You are talking to ${userProfile.name}, a ${userProfile.role}.
+    ${details}
+    Their Bio: ${userProfile.bio}.
+    
+    Your goal is to help them find teammates, improve their skills, and win hackathons.
+    Keep your responses concise, encouraging, and actionable. Use emojis occasionally.`;
+
+    return ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: systemInstruction,
+        }
+    });
+};

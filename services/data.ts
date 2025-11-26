@@ -1,12 +1,44 @@
-import { UserProfile, Hackathon, ChatMessage } from '../types';
+
+import { UserProfile, Hackathon, ChatMessage, StudentProfile, HiringRequest } from '../types';
 
 // --- Mock Data Constants ---
 
 export const MOCK_HACKATHONS: Hackathon[] = [
   {
+    id: 'h6',
+    title: 'Delhi NCR Innovate',
+    date: 'Nov 29-30',
+    location: 'New Delhi, NCR',
+    description: 'The biggest tech sprint in North India focusing on Smart Cities.',
+    image: 'https://images.unsplash.com/photo-1587440871875-191322ee64b0?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org4',
+    participants: 1500
+  },
+  {
+    id: 'h7',
+    title: 'Mumbai FinTech Expo',
+    date: 'Nov 27-28',
+    location: 'Mumbai, Maharashtra',
+    description: 'Revolutionizing finance in the commercial capital of India.',
+    image: 'https://images.unsplash.com/photo-1567473030492-533b30c5494c?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org5',
+    participants: 2100
+  },
+  {
+    id: 'h8',
+    title: 'Bengaluru AI Summit',
+    date: 'Dec 05-07',
+    location: 'Bangalore, Karnataka',
+    description: 'Join top developers in the Silicon Valley of India for an AI showdown.',
+    image: 'https://images.unsplash.com/photo-1596720426673-e4e14290f0cc?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org6',
+    participants: 3200
+  },
+  {
     id: 'h1',
     title: 'Global AI Challenge',
-    date: 'Oct 15-17',
+    date: 'Dec 09-10',
+    location: 'Online / Remote',
     description: 'Build the future of Generative AI.',
     image: 'https://picsum.photos/400/200?random=1',
     organizerId: 'org1',
@@ -15,7 +47,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
   {
     id: 'h2',
     title: 'GreenEarth Hack',
-    date: 'Nov 05-07',
+    date: 'Jan 05-06, 2026',
+    location: 'London, UK',
     description: 'Sustainable tech solutions for a better planet.',
     image: 'https://picsum.photos/400/200?random=2',
     organizerId: 'org2',
@@ -24,29 +57,12 @@ export const MOCK_HACKATHONS: Hackathon[] = [
   {
     id: 'h3',
     title: 'FinTech Revolution',
-    date: 'Nov 20-22',
+    date: 'Jan 02-03, 2026',
+    location: 'New York, USA',
     description: 'Disrupting the banking industry.',
     image: 'https://picsum.photos/400/200?random=3',
     organizerId: 'org3',
     participants: 600
-  },
-  {
-    id: 'h4',
-    title: 'EdTech Heroes',
-    date: 'Dec 01-03',
-    description: 'Gamifying education for the next gen.',
-    image: 'https://picsum.photos/400/200?random=4',
-    organizerId: 'org1',
-    participants: 430
-  },
-  {
-    id: 'h5',
-    title: 'Health++ Mock',
-    date: 'Jan 10-12',
-    description: 'Healthcare innovation sprint.',
-    image: 'https://picsum.photos/400/200?random=5',
-    organizerId: 'org2',
-    participants: 900
   }
 ];
 
@@ -126,8 +142,8 @@ export const MOCK_USERS: UserProfile[] = [
 export const MOCK_TEAM_MEMBERS: UserProfile[] = [
     {
         id: 'tm1',
-        name: 'Sarah Jones',
-        email: 'sarah@example.com',
+        name: 'Aparna Singh',
+        email: 'aparnasinghanchor@gmail.com',
         role: 'student',
         photoURL: 'https://picsum.photos/100/100?random=20',
         bio: 'Backend Wizard.',
@@ -153,6 +169,8 @@ export const MOCK_TEAM_MEMBERS: UserProfile[] = [
         rating: 1100
     }
 ];
+
+export const MOCK_REQUESTS: HiringRequest[] = [];
 
 // --- Simulation Service ---
 
@@ -199,5 +217,26 @@ export const fetchChatMessages = async (roomId: string): Promise<ChatMessage[]> 
 export const fetchLeaderboard = async (): Promise<UserProfile[]> => {
     await new Promise(resolve => setTimeout(resolve, 600));
     // Sort users by rating (descending)
-    return [...MOCK_USERS].sort((a, b) => b.rating - a.rating);
+    return [...MOCK_USERS].sort((a, b) => {
+        const ratingA = a.role === 'student' ? a.rating : 0;
+        const ratingB = b.role === 'student' ? b.rating : 0;
+        return ratingB - ratingA;
+    });
+}
+
+export const sendHiringRequest = async (request: Omit<HiringRequest, 'id' | 'timestamp' | 'status'>): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const newReq: HiringRequest = {
+        ...request,
+        id: 'req-' + Date.now(),
+        timestamp: Date.now(),
+        status: 'pending'
+    };
+    MOCK_REQUESTS.push(newReq);
+    console.log("Request sent:", newReq);
+}
+
+export const fetchSentRequests = async (senderId: string): Promise<HiringRequest[]> => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    return MOCK_REQUESTS.filter(r => r.senderId === senderId);
 }

@@ -1,14 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, Role } from '../types';
 
-// In a real app, you would import Firebase Auth here
-// import { auth, db } from '../services/firebase';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { UserProfile, Role, StudentProfile, OrganizerProfile, ProfessionalProfile } from '../types';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, role: Role) => Promise<void>;
-  signup: (email: string, password: string, role: Role, name: string) => Promise<void>;
+  signup: (email: string, password: string, role: Role, profileData: any) => Promise<void>;
   logout: () => void;
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => void;
@@ -21,7 +19,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persisted session simulation
     const stored = localStorage.getItem('collabx_user');
     if (stored) {
       setUser(JSON.parse(stored));
@@ -31,48 +28,114 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, role: Role) => {
     setLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const mockUser: UserProfile = {
-      id: 'current-user',
-      name: email.split('@')[0],
-      email,
-      role, // Dynamically set based on login for demo purposes
-      bio: 'Enthusiastic learner ready to build.',
-      skills: ['JavaScript', 'React'],
-      interests: ['AI', 'Web3'],
-      xp: 150,
-      level: 1,
-      badges: ['Newbie'],
-      rating: 1200, // Default start rating
-      photoURL: `https://picsum.photos/200?random=${Math.random()}`
+    // Create mock user based on role for demo
+    let mockUser: UserProfile;
+    const base = {
+        id: 'current-user',
+        name: email.split('@')[0],
+        email,
+        bio: 'Welcome to my profile.',
+        photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}&backgroundColor=c0aede`
     };
+
+    if (role === 'student') {
+        mockUser = {
+            ...base,
+            role: 'student',
+            skills: ['JavaScript', 'React'],
+            interests: ['AI', 'Web3'],
+            xp: 150,
+            level: 1,
+            badges: ['Newbie'],
+            rating: 1200
+        };
+    } else if (role === 'organizer') {
+        mockUser = {
+            ...base,
+            role: 'organizer',
+            organizationName: 'Tech Innovators Inc.',
+            location: 'San Francisco, CA',
+            themes: ['AI', 'Sustainability']
+        };
+    } else {
+        // Mock Professional Login
+        mockUser = {
+            ...base,
+            role: 'professional',
+            company: 'TechCorp',
+            position: 'Senior Engineer',
+            yearsOfExperience: 8,
+            skills: ['System Design', 'Leadership'],
+            domainExpertise: ['AI', 'Cloud'],
+            hiringRequirements: {
+                requiredSkills: ['React', 'Node.js'],
+                domain: 'AI',
+                experienceNeeded: 2,
+                duration: '6 Months',
+                stipend: 'Paid',
+                location: 'Remote',
+                projectDescription: 'Building a new Generative AI Dashboard.',
+                hiringType: 'Intern'
+            }
+        };
+    }
 
     setUser(mockUser);
     localStorage.setItem('collabx_user', JSON.stringify(mockUser));
     setLoading(false);
   };
 
-  const signup = async (email: string, password: string, role: Role, name: string) => {
+  const signup = async (email: string, password: string, role: Role, profileData: any) => {
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const newUser: UserProfile = {
-      id: 'new-user-' + Date.now(),
-      name,
-      email,
-      role,
-      bio: '',
-      skills: [],
-      interests: [],
-      xp: 0,
-      level: 1,
-      badges: [],
-      rating: 1000,
-      photoURL: 'https://picsum.photos/200'
+    let newUser: UserProfile;
+    const base = {
+        id: 'new-user-' + Date.now(),
+        email,
+        photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${email}&backgroundColor=c0aede`,
+        name: profileData.name || email.split('@')[0],
+        bio: profileData.bio || '',
     };
 
+    if (role === 'student') {
+        newUser = {
+            ...base,
+            role: 'student',
+            xp: 0,
+            level: 1,
+            badges: [],
+            rating: 1000,
+            skills: profileData.skills || [],
+            interests: profileData.interests || []
+        } as StudentProfile;
+    } else if (role === 'organizer') {
+        newUser = {
+            ...base,
+            role: 'organizer',
+            organizationName: profileData.organizationName || '',
+            location: profileData.location || '',
+            themes: profileData.themes || [],
+            website: profileData.website || ''
+        } as OrganizerProfile;
+    } else {
+        // Professional Signup Structure
+        newUser = {
+            ...base,
+            role: 'professional',
+            company: profileData.company || '',
+            position: profileData.position || '',
+            yearsOfExperience: profileData.yearsOfExperience || 0,
+            skills: profileData.skills || [],
+            domainExpertise: profileData.domainExpertise || [],
+            hiringRequirements: profileData.hiringRequirements
+        } as ProfessionalProfile;
+    }
+
+    // In a real app: await setDoc(doc(db, "users", newUser.id), newUser);
+    
     setUser(newUser);
     localStorage.setItem('collabx_user', JSON.stringify(newUser));
     setLoading(false);
@@ -92,7 +155,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateProfile = (updates: Partial<UserProfile>) => {
     if (user) {
-        const updated = { ...user, ...updates };
+        // Simplified merge for demo, explicitly casting to UserProfile to resolve union type issues
+        const updated = { ...user, ...updates } as UserProfile;
         setUser(updated);
         localStorage.setItem('collabx_user', JSON.stringify(updated));
     }
