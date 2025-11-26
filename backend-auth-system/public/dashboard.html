@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome, <span id="username">User</span>!</h2>
+        <p>You have successfully logged in.</p>
+        <button onclick="logout()" style="margin-top: 20px; background: #ff4b4b;">Logout</button>
+    </div>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        if (!token) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('username').innerText = user.name;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
