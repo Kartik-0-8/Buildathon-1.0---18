@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -7,6 +8,7 @@ import { LandingPage } from './components/LandingPage';
 import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { OrganizerDashboard } from './components/dashboard/OrganizerDashboard';
 import { ProfessionalDashboard } from './components/dashboard/ProfessionalDashboard';
+import { HackathonList } from './components/dashboard/HackathonList';
 import { ChatRoom } from './components/chat/ChatRoom';
 import { Role } from './types';
 
@@ -61,7 +63,7 @@ const AppRoutes = () => {
                 } />
                 <Route path="/hackathons" element={
                     <ProtectedRoute allowedRole="student">
-                         <div className="p-4 text-center text-gray-500">Hackathon Listing (Coming Soon)</div>
+                         <HackathonList />
                     </ProtectedRoute>
                 } />
                 <Route path="/team" element={

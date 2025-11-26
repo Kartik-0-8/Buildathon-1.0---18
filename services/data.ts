@@ -12,7 +12,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'The biggest tech sprint in North India focusing on Smart Cities.',
     image: 'https://images.unsplash.com/photo-1587440871875-191322ee64b0?auto=format&fit=crop&q=80&w=400',
     organizerId: 'org4',
-    participants: 1500
+    participants: 1500,
+    themes: ['Smart City', 'IoT']
   },
   {
     id: 'h7',
@@ -22,7 +23,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'Revolutionizing finance in the commercial capital of India.',
     image: 'https://images.unsplash.com/photo-1567473030492-533b30c5494c?auto=format&fit=crop&q=80&w=400',
     organizerId: 'org5',
-    participants: 2100
+    participants: 2100,
+    themes: ['FinTech', 'Blockchain']
   },
   {
     id: 'h8',
@@ -32,7 +34,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'Join top developers in the Silicon Valley of India for an AI showdown.',
     image: 'https://images.unsplash.com/photo-1596720426673-e4e14290f0cc?auto=format&fit=crop&q=80&w=400',
     organizerId: 'org6',
-    participants: 3200
+    participants: 3200,
+    themes: ['AI', 'ML']
   },
   {
     id: 'h1',
@@ -42,7 +45,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'Build the future of Generative AI.',
     image: 'https://picsum.photos/400/200?random=1',
     organizerId: 'org1',
-    participants: 1240
+    participants: 1240,
+    themes: ['AI', 'Generative']
   },
   {
     id: 'h2',
@@ -52,7 +56,8 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'Sustainable tech solutions for a better planet.',
     image: 'https://picsum.photos/400/200?random=2',
     organizerId: 'org2',
-    participants: 850
+    participants: 850,
+    themes: ['Sustainability', 'GreenTech']
   },
   {
     id: 'h3',
@@ -62,7 +67,52 @@ export const MOCK_HACKATHONS: Hackathon[] = [
     description: 'Disrupting the banking industry.',
     image: 'https://picsum.photos/400/200?random=3',
     organizerId: 'org3',
-    participants: 600
+    participants: 600,
+    themes: ['FinTech', 'DeFi']
+  },
+  {
+    id: 'h9',
+    title: 'CyberDefense 2024',
+    date: 'Feb 10-12, 2026',
+    location: 'Tel Aviv, Israel',
+    description: 'Protecting the digital frontier. Advanced CTF challenges included.',
+    image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org9',
+    participants: 900,
+    themes: ['Cybersecurity', 'Network']
+  },
+  {
+    id: 'h10',
+    title: 'HealthTech Summit',
+    date: 'Feb 20-22, 2026',
+    location: 'Boston, USA',
+    description: 'Innovating for a healthier tomorrow. Wearables and BioTech.',
+    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org10',
+    participants: 1100,
+    themes: ['HealthTech', 'BioTech']
+  },
+  {
+    id: 'h11',
+    title: 'EdTech Global',
+    date: 'Mar 05-07, 2026',
+    location: 'Online',
+    description: 'Reimagining education through technology.',
+    image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org11',
+    participants: 2500,
+    themes: ['EdTech', 'Social']
+  },
+  {
+    id: 'h12',
+    title: 'GameJam X',
+    date: 'Mar 15-17, 2026',
+    location: 'Tokyo, Japan',
+    description: '48 hours to create the next indie hit.',
+    image: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&q=80&w=400',
+    organizerId: 'org12',
+    participants: 1800,
+    themes: ['Gaming', 'VR/AR']
   }
 ];
 
