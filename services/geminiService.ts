@@ -132,3 +132,44 @@ export const getAiChatSession = (userProfile: UserProfile) => {
         }
     });
 };
+
+export const generateHackathonDescription = async (title: string, themes: string[]): Promise<string> => {
+    const ai = getClient();
+    if (!ai) return "Join us for an exciting hackathon event! (AI Unavailable)";
+
+    try {
+        const prompt = `Write a compelling, exciting 2-sentence description for a hackathon titled "${title}" focusing on these themes: ${themes.join(', ')}. Include a call to action.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        return response.text || "";
+    } catch (error) {
+        console.error("Gemini Error:", error);
+        return "Join us for an exciting event!";
+    }
+};
+
+export const generateJobDescription = async (hiringType: string, skills: string[], domain: string): Promise<string> => {
+    const ai = getClient();
+    if (!ai) return "We are looking for talented individuals to join our team. (AI Unavailable)";
+
+    try {
+        const prompt = `Write a professional, attractive 2-sentence project description for a ${hiringType} role. 
+        Required Skills: ${skills.join(', ')}. 
+        Domain: ${domain}.
+        Highlight the impact of the work.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        return response.text || "";
+    } catch (error) {
+        console.error("Gemini Error:", error);
+        return "Exciting opportunity to work on cutting-edge projects.";
+    }
+};

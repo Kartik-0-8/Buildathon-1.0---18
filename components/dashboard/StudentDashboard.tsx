@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchHackathons, fetchStudents, fetchTeamMembers, fetchLeaderboard } from '../../services/data';
@@ -269,23 +270,29 @@ export const StudentDashboard: React.FC = () => {
                                         <div className="relative shrink-0">
                                             <img src={matchUser.photoURL} alt={matchUser.name} className="w-16 h-16 rounded-full object-cover" />
                                             <span className={`absolute -bottom-1 -right-1 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-gray-800 ${score > 80 ? 'bg-green-500' : score > 60 ? 'bg-yellow-500' : 'bg-gray-400'}`}>
-                                                {score}% Match
+                                                {score}%
                                             </span>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h4 className="font-bold text-gray-900 dark:text-white text-lg">{matchUser.name}</h4>
+                                                    <h4 className="font-bold text-gray-900 dark:text-white text-lg flex items-center">
+                                                        {matchUser.name}
+                                                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${score > 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+                                                            {score}% Match
+                                                        </span>
+                                                    </h4>
                                                     <p className="text-xs text-primary-600 font-medium mb-1">Rating: {matchStudent.rating}</p>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button 
                                                         onClick={() => handleAnalyzeMatch(matchUser)}
                                                         disabled={analysisLoading === matchUser.id}
-                                                        className="p-2 text-primary-600 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+                                                        className="px-3 py-2 text-primary-600 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors flex items-center gap-2 text-xs font-bold"
                                                         title="Analyze Compatibility with AI"
                                                     >
-                                                        {analysisLoading === matchUser.id ? <RefreshCw size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                                                        {analysisLoading === matchUser.id ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                                        Analyze
                                                     </button>
                                                     <button 
                                                         onClick={() => handleConnect(matchUser.id)}

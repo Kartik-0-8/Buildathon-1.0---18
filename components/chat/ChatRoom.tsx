@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchChatMessages } from '../../services/data';
@@ -28,6 +29,7 @@ export const ChatRoom: React.FC<{ roomId: string }> = ({ roomId }) => {
             id: Date.now().toString(),
             senderId: user.id,
             senderName: user.name,
+            senderRole: user.role,
             text: newMessage,
             timestamp: Date.now()
         };
@@ -53,7 +55,10 @@ export const ChatRoom: React.FC<{ roomId: string }> = ({ roomId }) => {
                                 ? 'bg-primary-600 text-white rounded-br-none' 
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none'
                             }`}>
-                                <p className="text-xs opacity-75 mb-1">{msg.senderName}</p>
+                                <div className="flex items-center gap-2 mb-1 opacity-75">
+                                    <p className="text-xs font-bold">{msg.senderName}</p>
+                                    <span className="text-[10px] uppercase border border-current px-1 rounded">{msg.senderRole}</span>
+                                </div>
                                 <p className="text-sm">{msg.text}</p>
                             </div>
                         </div>

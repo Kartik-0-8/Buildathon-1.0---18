@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { User, Briefcase, Calendar, Lock, Mail, ArrowLeft, ArrowRight, CheckCircle, MapPin, Globe, Target, Building, Clock } from 'lucide-react';
+import { User, Briefcase, Calendar, Lock, Mail, ArrowLeft, ArrowRight, CheckCircle, Building } from 'lucide-react';
+import { ThemeSwitcher } from '../theme/ThemeSwitcher';
 
 export const AuthScreen: React.FC = () => {
   const { login, signup, resetPassword, loading } = useAuth();
@@ -104,7 +105,6 @@ export const AuthScreen: React.FC = () => {
               yearsOfExperience: yoe,
               skills: profSkills.split(',').map(s => s.trim()).filter(s => s),
               domainExpertise: domainExpertise.split(',').map(s => s.trim()).filter(s => s),
-              // Initialize empty requirements
               hiringRequirements: {
                   requiredSkills: [],
                   domain: '',
@@ -136,30 +136,34 @@ export const AuthScreen: React.FC = () => {
         icon: User, 
         label: 'Student', 
         desc: 'Join hackathons, find teams, and earn badges.',
-        color: 'text-blue-500', 
-        bg: 'bg-blue-50' 
+        color: 'text-blue-600 dark:text-blue-500', 
+        bg: 'bg-blue-50 dark:bg-blue-900/20' 
     },
     { 
         id: 'organizer', 
         icon: Calendar, 
         label: 'Organizer', 
         desc: 'Post hackathons, manage participants.',
-        color: 'text-purple-500', 
-        bg: 'bg-purple-50' 
+        color: 'text-purple-600 dark:text-purple-500', 
+        bg: 'bg-purple-50 dark:bg-purple-900/20' 
     },
     { 
         id: 'professional', 
         icon: Briefcase, 
         label: 'Professional', 
         desc: 'Hire talent, find interns, and mentor.',
-        color: 'text-green-500', 
-        bg: 'bg-green-50' 
+        color: 'text-green-600 dark:text-green-500', 
+        bg: 'bg-green-50 dark:bg-green-900/20' 
     }
   ];
 
+  // Common input class string for consistency
+  const inputClasses = "w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all";
+  const simpleInputClasses = "w-full p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all";
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex font-sans">
-      {/* Left Panel */}
+    <div className="min-h-screen flex font-sans bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      {/* Left Panel - Hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 overflow-hidden text-white items-center justify-center p-12">
         <div className="absolute inset-0 z-0">
              <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary-600/30 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
@@ -178,23 +182,28 @@ export const AuthScreen: React.FC = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-gray-800 relative">
-        <Link to="/" className="absolute top-6 left-6 flex items-center text-sm font-medium text-gray-500 hover:text-primary-600 transition-colors">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-gray-900 relative transition-colors duration-300">
+        <Link to="/" className="absolute top-6 left-6 flex items-center text-sm font-medium text-gray-500 hover:text-primary-600 transition-colors z-20">
             <ArrowLeft size={18} className="mr-1" /> Back to Home
         </Link>
+
+        {/* Theme Switcher - Absolute Positioned Top Right */}
+        <div className="absolute top-6 right-6 z-20 w-40">
+            <ThemeSwitcher />
+        </div>
 
         <div className="w-full max-w-md space-y-8 animate-fade-in mt-12 lg:mt-0">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
                 {view === 'forgot' ? 'Reset Password' : view === 'signup' ? 'Create Account' : 'Welcome Back'}
             </h2>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
                 {view === 'signup' && signupStep === 'profile' ? `Complete your ${selectedRole} profile.` : 'Please enter your details.'}
             </p>
           </div>
 
           {message && (
-            <div className="p-4 bg-green-50 text-green-700 rounded-xl flex items-center text-sm">
+            <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center text-sm">
               <CheckCircle size={16} className="mr-2" /> {message}
             </div>
           )}
@@ -205,19 +214,19 @@ export const AuthScreen: React.FC = () => {
                    <button 
                     key={role.id}
                     onClick={() => setSelectedRole(role.id as Role)} 
-                    className="w-full group flex items-start p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-500 transition-all text-left bg-white dark:bg-gray-800 shadow-sm"
+                    className="w-full group flex items-start p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left bg-white dark:bg-gray-800 shadow-sm"
                    >
                      <div className={`p-3 rounded-lg mr-4 ${role.bg} ${role.color} group-hover:scale-110 transition-transform`}>
                          <role.icon size={24} />
                      </div>
                      <div>
                          <h3 className="font-bold text-gray-900 dark:text-white">{role.label}</h3>
-                         <p className="text-sm text-gray-500 mt-1">{role.desc}</p>
+                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{role.desc}</p>
                      </div>
                    </button>
                ))}
                <div className="text-center pt-4">
-                 <button onClick={() => navigate('/login')} className="text-sm text-gray-500 hover:text-primary-600 font-medium">
+                 <button onClick={() => navigate('/login')} className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 font-medium">
                     Already have an account? <span className="font-bold text-primary-600">Log in</span>
                  </button>
                </div>
@@ -230,16 +239,16 @@ export const AuthScreen: React.FC = () => {
                       {selectedRole === 'student' && (
                           <>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Top Skills</label>
-                                <input type="text" className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="React, Node.js..." value={skills} onChange={(e) => setSkills(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Top Skills</label>
+                                <input type="text" className={simpleInputClasses} placeholder="React, Node.js..." value={skills} onChange={(e) => setSkills(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Interests</label>
-                                <input type="text" className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="AI, Fintech..." value={interests} onChange={(e) => setInterests(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Interests</label>
+                                <input type="text" className={simpleInputClasses} placeholder="AI, Fintech..." value={interests} onChange={(e) => setInterests(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Bio</label>
-                                <textarea className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" rows={3} placeholder="Tell us about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Bio</label>
+                                <textarea className={simpleInputClasses} rows={3} placeholder="Tell us about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} />
                             </div>
                           </>
                       )}
@@ -248,51 +257,51 @@ export const AuthScreen: React.FC = () => {
                       {selectedRole === 'organizer' && (
                           <>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Organization Name</label>
-                                <input type="text" required className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="Tech Corp Inc." value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Organization Name</label>
+                                <input type="text" required className={simpleInputClasses} placeholder="Tech Corp Inc." value={orgName} onChange={(e) => setOrgName(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Location</label>
-                                <input type="text" required className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="New York, NY" value={locationStr} onChange={(e) => setLocationStr(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Location</label>
+                                <input type="text" required className={simpleInputClasses} placeholder="New York, NY" value={locationStr} onChange={(e) => setLocationStr(e.target.value)} />
                             </div>
                              <div>
-                                <label className="block text-sm font-medium mb-1">Website</label>
-                                <input type="text" className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Website</label>
+                                <input type="text" className={simpleInputClasses} placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} />
                             </div>
                           </>
                       )}
 
-                      {/* --- Professional Specific Fields (UPDATED) --- */}
+                      {/* --- Professional Specific Fields --- */}
                       {selectedRole === 'professional' && (
                           <>
                              <div>
-                                <label className="block text-sm font-medium mb-1">Company / Organization</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Company / Organization</label>
                                 <div className="relative">
                                     <Building size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                                    <input type="text" required className="w-full pl-10 pr-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="Google, Startup Inc..." value={company} onChange={(e) => setCompany(e.target.value)} />
+                                    <input type="text" required className={inputClasses} placeholder="Google, Startup Inc..." value={company} onChange={(e) => setCompany(e.target.value)} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Position</label>
-                                    <input type="text" required className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="Sr. Engineer" value={position} onChange={(e) => setPosition(e.target.value)} />
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Position</label>
+                                    <input type="text" required className={simpleInputClasses} placeholder="Sr. Engineer" value={position} onChange={(e) => setPosition(e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Exp (Years)</label>
-                                    <input type="number" required className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="5" value={yoe} onChange={(e) => setYoe(Number(e.target.value))} />
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Exp (Years)</label>
+                                    <input type="number" required className={simpleInputClasses} placeholder="5" value={yoe} onChange={(e) => setYoe(Number(e.target.value))} />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Your Skills (Multi-select)</label>
-                                <input type="text" className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="Java, System Design, AWS..." value={profSkills} onChange={(e) => setProfSkills(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Your Skills (Multi-select)</label>
+                                <input type="text" className={simpleInputClasses} placeholder="Java, System Design, AWS..." value={profSkills} onChange={(e) => setProfSkills(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Domain Expertise</label>
-                                <input type="text" className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="Fintech, AI, Healthcare..." value={domainExpertise} onChange={(e) => setDomainExpertise(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Domain Expertise</label>
+                                <input type="text" className={simpleInputClasses} placeholder="Fintech, AI, Healthcare..." value={domainExpertise} onChange={(e) => setDomainExpertise(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Hiring Preference</label>
-                                <select className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" value={hiringType} onChange={e => setHiringType(e.target.value)}>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Hiring Preference</label>
+                                <select className={simpleInputClasses} value={hiringType} onChange={e => setHiringType(e.target.value)}>
                                     <option value="Intern">Internship</option>
                                     <option value="Project">Project Based</option>
                                     <option value="Fulltime">Full Time</option>
@@ -300,8 +309,8 @@ export const AuthScreen: React.FC = () => {
                                 </select>
                             </div>
                              <div>
-                                <label className="block text-sm font-medium mb-1">Bio</label>
-                                <textarea className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" rows={2} placeholder="Brief professional bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Bio</label>
+                                <textarea className={simpleInputClasses} rows={2} placeholder="Brief professional bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
                             </div>
                           </>
                       )}
@@ -311,30 +320,30 @@ export const AuthScreen: React.FC = () => {
                   <div className="space-y-4">
                     {view === 'signup' && (
                         <div>
-                            <label className="block text-sm font-medium mb-1">Full Name</label>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
                             <div className="relative">
                                 <User size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                                <input type="text" required className="w-full pl-10 pr-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} />
+                                <input type="text" required className={inputClasses} placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} />
                             </div>
                         </div>
                     )}
                     <div>
-                        <label className="block text-sm font-medium mb-1">Email Address</label>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
                         <div className="relative">
                             <Mail size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                            <input type="email" required className="w-full pl-10 pr-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                            <input type="email" required className={inputClasses} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                         </div>
                     </div>
 
                     {view !== 'forgot' && (
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <label className="block text-sm font-medium">Password</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
                                 {view === 'login' && <button type="button" onClick={() => setView('forgot')} className="text-xs text-primary-600 hover:underline">Forgot?</button>}
                             </div>
                             <div className="relative">
                                 <Lock size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                                <input type="password" required className="w-full pl-10 pr-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                <input type="password" required className={inputClasses} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                             </div>
                         </div>
                     )}
@@ -344,7 +353,7 @@ export const AuthScreen: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center"
+                className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all flex items-center justify-center"
               >
                 {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 
                  (view === 'login' ? 'Sign In' : view === 'signup' && signupStep === 'basic' ? 'Next: Profile' : view === 'signup' ? 'Create Account' : 'Send Reset Link')}
@@ -353,15 +362,15 @@ export const AuthScreen: React.FC = () => {
 
               <div className="text-center pt-2">
                 {view === 'login' && (
-                     <p className="text-sm text-gray-500">Don't have an account? <button type="button" onClick={() => navigate('/signup')} className="text-primary-600 font-bold hover:underline">Sign Up</button></p>
+                     <p className="text-sm text-gray-500 dark:text-gray-400">Don't have an account? <button type="button" onClick={() => navigate('/signup')} className="text-primary-600 font-bold hover:underline">Sign Up</button></p>
                 )}
                 {view === 'signup' && (
-                   <button type="button" onClick={handleSignupBack} className="text-sm text-gray-500 hover:text-primary-600 font-medium">
+                   <button type="button" onClick={handleSignupBack} className="text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 font-medium">
                       <ArrowLeft size={16} className="inline mr-1" /> {signupStep === 'profile' ? 'Back' : 'Back to Login'}
                    </button>
                 )}
                 {view === 'forgot' && (
-                   <button type="button" onClick={() => setView('login')} className="text-sm text-gray-500 hover:text-primary-600 font-medium">Back to Login</button>
+                   <button type="button" onClick={() => setView('login')} className="text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 font-medium">Back to Login</button>
                 )}
               </div>
             </form>

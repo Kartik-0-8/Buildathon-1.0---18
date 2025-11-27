@@ -259,8 +259,8 @@ export const fetchTeamMembers = async (): Promise<UserProfile[]> => {
 
 export const fetchChatMessages = async (roomId: string): Promise<ChatMessage[]> => {
   return [
-    { id: 'm1', senderId: 'u2', senderName: 'Alice', text: "Anyone interested in the AI track?", timestamp: Date.now() - 100000 },
-    { id: 'm2', senderId: 'u3', senderName: 'Bob', text: "I am! I can handle the ML models.", timestamp: Date.now() - 50000 },
+    { id: 'm1', senderId: 'u2', senderName: 'Alice', senderRole: 'student', text: "Anyone interested in the AI track?", timestamp: Date.now() - 100000 },
+    { id: 'm2', senderId: 'u3', senderName: 'Bob', senderRole: 'student', text: "I am! I can handle the ML models.", timestamp: Date.now() - 50000 },
   ];
 };
 

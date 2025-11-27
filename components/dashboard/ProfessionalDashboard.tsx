@@ -1,16 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ProfessionalProfile, HiringRequest } from '../../types';
 import { TalentSearch } from './TalentSearch';
 import { fetchSentRequests, addHackathon } from '../../services/data';
-import { Briefcase, Search, Plus, User, FileText, CheckCircle, Clock } from 'lucide-react';
+import { generateJobDescription } from '../../services/geminiService';
+import { Briefcase, Search, Plus, User, FileText, CheckCircle, Clock, Wand2 } from 'lucide-react';
 
 export const ProfessionalDashboard: React.FC = () => {
     const { user, updateProfile } = useAuth();
     const [activeTab, setActiveTab] = useState<'overview' | 'talent' | 'requests'>('overview');
     const [showPostModal, setShowPostModal] = useState(false);
     const [requests, setRequests] = useState<HiringRequest[]>([]);
+    const [isGenerating, setIsGenerating] = useState(false);
     
     // Form for requirement
     const [reqForm, setReqForm] = useState({
@@ -46,6 +47,15 @@ export const ProfessionalDashboard: React.FC = () => {
         updateProfile({ hiringRequirements: updatedReq });
         setShowPostModal(false);
         alert("Requirement Posted! Matching logic updated.");
+    };
+
+    const handleGenerateDesc = async () => {
+        if (!reqForm.requiredSkills || !reqForm.domain) return alert("Please fill skills and domain first.");
+        setIsGenerating(true);
+        const skillsArray = reqForm.requiredSkills.split(',').map(s => s.trim());
+        const desc = await generateJobDescription(reqForm.hiringType, skillsArray, reqForm.domain);
+        setReqForm(prev => ({ ...prev, projectDescription: desc }));
+        setIsGenerating(false);
     };
 
     if (!user || user.role !== 'professional') return <div>Access Denied</div>;
@@ -180,7 +190,18 @@ export const ProfessionalDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium">Description</label>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleGenerateDesc}
+                                        disabled={isGenerating}
+                                        className="text-xs text-primary-600 hover:text-primary-700 flex items-center font-medium disabled:opacity-50"
+                                    >
+                                        <Wand2 size={12} className={`mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+                                        {isGenerating ? 'Writing...' : 'Generate with AI'}
+                                    </button>
+                                </div>
                                 <textarea className="w-full p-2 border rounded-lg" rows={3} value={reqForm.projectDescription} onChange={e => setReqForm({...reqForm, projectDescription: e.target.value})} />
                             </div>
                             <div className="flex gap-2 pt-2">

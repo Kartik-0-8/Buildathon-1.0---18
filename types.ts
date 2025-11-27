@@ -68,6 +68,7 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   senderName: string;
+  senderRole: Role;
   text: string;
   timestamp: number;
 }

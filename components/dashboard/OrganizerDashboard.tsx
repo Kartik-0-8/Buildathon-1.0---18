@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
-import { Plus, Users, MessageSquare, BarChart, X, Edit, Target, Globe } from 'lucide-react';
+import { Plus, Users, MessageSquare, BarChart, X, Edit, Target, Globe, Wand2 } from 'lucide-react';
 import { ChatRoom } from '../chat/ChatRoom';
 import { MOCK_HACKATHONS, addHackathon, updateHackathon } from '../../services/data';
+import { generateHackathonDescription } from '../../services/geminiService';
 
 export const OrganizerDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState('active');
@@ -10,6 +10,7 @@ export const OrganizerDashboard: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
     const [formData, setFormData] = useState({ title: '', date: '', location: '', description: '', themes: '', website: '' });
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,6 +69,15 @@ export const OrganizerDashboard: React.FC = () => {
         setShowPostForm(true);
     };
 
+    const handleGenerateDescription = async () => {
+        if (!formData.title) return alert("Please enter a title first.");
+        setIsGenerating(true);
+        const themesArray = formData.themes.split(',').map(t => t.trim()).filter(t => t);
+        const desc = await generateHackathonDescription(formData.title, themesArray);
+        setFormData(prev => ({ ...prev, description: desc }));
+        setIsGenerating(false);
+    };
+
     return (
         <div className="space-y-8 relative">
             <header className="flex justify-between items-center">
@@ -116,7 +126,18 @@ export const OrganizerDashboard: React.FC = () => {
                                 <input type="text" placeholder="https://..." className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium">Description</label>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleGenerateDescription}
+                                        disabled={isGenerating}
+                                        className="text-xs text-primary-600 hover:text-primary-700 flex items-center font-medium disabled:opacity-50"
+                                    >
+                                        <Wand2 size={12} className={`mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+                                        {isGenerating ? 'Writing...' : 'Generate with AI'}
+                                    </button>
+                                </div>
                                 <textarea required rows={3} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
                             </div>
                             <button type="submit" className="w-full py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700">
