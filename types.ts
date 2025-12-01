@@ -18,6 +18,7 @@ export interface StudentProfile extends BaseProfile {
   level: number;
   badges: string[];
   rating: number;
+  teamId?: string; // Added for team grouping
 }
 
 export interface OrganizerProfile extends BaseProfile {
@@ -71,6 +72,12 @@ export interface ChatMessage {
   senderRole: Role;
   text: string;
   timestamp: number;
+  roomId?: string;
+  attachment?: {
+    type: 'image' | 'file';
+    url: string;
+    name: string;
+  };
 }
 
 export interface MatchResult {
@@ -88,6 +95,16 @@ export interface HiringRequest {
   receiverId: string; // Student ID
   type: 'Internship' | 'Project' | 'Fulltime' | 'Freelance';
   jobDetails: string;
+  status: RequestStatus;
+  timestamp: number;
+}
+
+export interface TeamRequest {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderPhoto?: string;
+  receiverId: string;
   status: RequestStatus;
   timestamp: number;
 }

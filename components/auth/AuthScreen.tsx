@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../types';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { User, Briefcase, Calendar, Lock, Mail, ArrowLeft, ArrowRight, CheckCircle, Building } from 'lucide-react';
+import { User, Briefcase, Calendar, Lock, Mail, ArrowLeft, ArrowRight, CheckCircle, Building, AlertCircle, KeyRound } from 'lucide-react';
 import { ThemeSwitcher } from '../theme/ThemeSwitcher';
 
 export const AuthScreen: React.FC = () => {
-  const { login, signup, resetPassword, loading } = useAuth();
+  const { login, signup, resetPassword, confirmPasswordReset, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -19,10 +19,16 @@ export const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   
+  // Forgot Password State
+  const [resetStep, setResetStep] = useState<'email' | 'otp'>('email');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
   // Role Selection
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [signupStep, setSignupStep] = useState<'basic' | 'profile'>('basic');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   // Student Fields
   const [skills, setSkills] = useState('');
@@ -58,67 +64,81 @@ export const AuthScreen: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+    setError('');
     
-    if (view === 'forgot') {
-      await resetPassword(email);
-      setMessage('Check your email for reset instructions.');
-      setTimeout(() => setView('login'), 3000);
-      return;
-    }
+    try {
+        if (view === 'forgot') {
+            if (resetStep === 'email') {
+                await resetPassword(email);
+                setMessage('OTP sent to your email (check console).');
+                setResetStep('otp');
+            } else {
+                await confirmPasswordReset(email, otp, newPassword);
+                setMessage('Password reset successful. Please log in.');
+                setTimeout(() => {
+                    setView('login');
+                    setResetStep('email');
+                    setOtp('');
+                    setNewPassword('');
+                    setPassword('');
+                }, 2000);
+            }
+            return;
+        }
 
-    if (view === 'login') {
-      let roleToUse: Role = 'student';
-      if (email.includes('org')) roleToUse = 'organizer';
-      else if (email.includes('pro')) roleToUse = 'professional';
-      await login(email, roleToUse);
-    } else {
-      // Signup Logic
-      if (!selectedRole) return;
-      
-      if (signupStep === 'basic') {
-          setSignupStep('profile');
-          return;
-      }
-      
-      let profileData: any = { name, bio };
+        if (view === 'login') {
+            await login(email, password);
+        } else {
+            // Signup Logic
+            if (!selectedRole) return;
+            
+            if (signupStep === 'basic') {
+                setSignupStep('profile');
+                return;
+            }
+            
+            let profileData: any = { name, bio };
 
-      if (selectedRole === 'student') {
-          profileData = {
-              ...profileData,
-              skills: skills.split(',').map(s => s.trim()).filter(s => s),
-              interests: interests.split(',').map(s => s.trim()).filter(s => s),
-          };
-      } else if (selectedRole === 'organizer') {
-          profileData = {
-              name,
-              organizationName: orgName,
-              location: locationStr,
-              website,
-              themes: themes.split(',').map(s => s.trim()).filter(s => s),
-              bio 
-          };
-      } else if (selectedRole === 'professional') {
-          profileData = {
-              ...profileData,
-              company,
-              position,
-              yearsOfExperience: yoe,
-              skills: profSkills.split(',').map(s => s.trim()).filter(s => s),
-              domainExpertise: domainExpertise.split(',').map(s => s.trim()).filter(s => s),
-              hiringRequirements: {
-                  requiredSkills: [],
-                  domain: '',
-                  experienceNeeded: 0,
-                  duration: '',
-                  stipend: '',
-                  location: '',
-                  projectDescription: '',
-                  hiringType: hiringType
-              }
-          };
-      }
+            if (selectedRole === 'student') {
+                profileData = {
+                    ...profileData,
+                    skills: skills.split(',').map(s => s.trim()).filter(s => s),
+                    interests: interests.split(',').map(s => s.trim()).filter(s => s),
+                };
+            } else if (selectedRole === 'organizer') {
+                profileData = {
+                    name,
+                    organizationName: orgName,
+                    location: locationStr,
+                    website,
+                    themes: themes.split(',').map(s => s.trim()).filter(s => s),
+                    bio 
+                };
+            } else if (selectedRole === 'professional') {
+                profileData = {
+                    ...profileData,
+                    company,
+                    position,
+                    yearsOfExperience: yoe,
+                    skills: profSkills.split(',').map(s => s.trim()).filter(s => s),
+                    domainExpertise: domainExpertise.split(',').map(s => s.trim()).filter(s => s),
+                    hiringRequirements: {
+                        requiredSkills: [],
+                        domain: '',
+                        experienceNeeded: 0,
+                        duration: '',
+                        stipend: '',
+                        location: '',
+                        projectDescription: '',
+                        hiringType: hiringType
+                    }
+                };
+            }
 
-      await signup(email, password, selectedRole, profileData);
+            await signup(email, password, selectedRole, profileData);
+        }
+    } catch (err: any) {
+        setError(err.message || "An error occurred.");
     }
   };
 
@@ -198,13 +218,19 @@ export const AuthScreen: React.FC = () => {
                 {view === 'forgot' ? 'Reset Password' : view === 'signup' ? 'Create Account' : 'Welcome Back'}
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {view === 'signup' && signupStep === 'profile' ? `Complete your ${selectedRole} profile.` : 'Please enter your details.'}
+                {view === 'signup' && signupStep === 'profile' ? `Complete your ${selectedRole} profile.` : view === 'forgot' && resetStep === 'otp' ? 'Enter OTP and new password.' : 'Please enter your details.'}
             </p>
           </div>
 
           {message && (
             <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center text-sm">
               <CheckCircle size={16} className="mr-2" /> {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center text-sm">
+              <AlertCircle size={16} className="mr-2" /> {error}
             </div>
           )}
 
@@ -316,36 +342,61 @@ export const AuthScreen: React.FC = () => {
                       )}
                   </div>
               ) : (
-                  // Step 1: Basic Info
+                  // Step 1: Basic Info (Login, Signup Basic, Forgot Password)
                   <div className="space-y-4">
-                    {view === 'signup' && (
-                        <div>
-                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
-                            <div className="relative">
-                                <User size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                                <input type="text" required className={inputClasses} placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} />
+                    
+                    {/* Forgot Password OTP View */}
+                    {view === 'forgot' && resetStep === 'otp' ? (
+                        <>
+                             <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">OTP Code</label>
+                                <div className="relative">
+                                    <KeyRound size={18} className="absolute top-3.5 left-3 text-gray-400"/>
+                                    <input type="text" required className={inputClasses} placeholder="123456" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                                </div>
                             </div>
-                        </div>
-                    )}
-                    <div>
-                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
-                        <div className="relative">
-                            <Mail size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                            <input type="email" required className={inputClasses} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                        </div>
-                    </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">New Password</label>
+                                <div className="relative">
+                                    <Lock size={18} className="absolute top-3.5 left-3 text-gray-400"/>
+                                    <input type="password" required className={inputClasses} placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Standard Fields */}
+                            {view === 'signup' && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
+                                    <div className="relative">
+                                        <User size={18} className="absolute top-3.5 left-3 text-gray-400"/>
+                                        <input type="text" required className={inputClasses} placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
 
-                    {view !== 'forgot' && (
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                                {view === 'login' && <button type="button" onClick={() => setView('forgot')} className="text-xs text-primary-600 hover:underline">Forgot?</button>}
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
+                                <div className="relative">
+                                    <Mail size={18} className="absolute top-3.5 left-3 text-gray-400"/>
+                                    <input type="email" required className={inputClasses} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={view === 'forgot' && resetStep === 'otp'} />
+                                </div>
                             </div>
-                            <div className="relative">
-                                <Lock size={18} className="absolute top-3.5 left-3 text-gray-400"/>
-                                <input type="password" required className={inputClasses} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-                            </div>
-                        </div>
+
+                            {view !== 'forgot' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                                        {view === 'login' && <button type="button" onClick={() => { setView('forgot'); setError(''); setMessage(''); }} className="text-xs text-primary-600 hover:underline">Forgot?</button>}
+                                    </div>
+                                    <div className="relative">
+                                        <Lock size={18} className="absolute top-3.5 left-3 text-gray-400"/>
+                                        <input type="password" required className={inputClasses} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                   </div>
               )}
@@ -353,16 +404,19 @@ export const AuthScreen: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all flex items-center justify-center"
+                className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 
-                 (view === 'login' ? 'Sign In' : view === 'signup' && signupStep === 'basic' ? 'Next: Profile' : view === 'signup' ? 'Create Account' : 'Send Reset Link')}
+                 (view === 'login' ? 'Sign In' : 
+                  view === 'signup' && signupStep === 'basic' ? 'Next: Profile' : 
+                  view === 'signup' ? 'Create Account' : 
+                  view === 'forgot' && resetStep === 'otp' ? 'Reset Password' : 'Send Reset Link')}
                 {view !== 'forgot' && <ArrowRight size={18} className="ml-2" />}
               </button>
 
               <div className="text-center pt-2">
                 {view === 'login' && (
-                     <p className="text-sm text-gray-500 dark:text-gray-400">Don't have an account? <button type="button" onClick={() => navigate('/signup')} className="text-primary-600 font-bold hover:underline">Sign Up</button></p>
+                     <p className="text-sm text-gray-500 dark:text-gray-400">Don't have an account? <button type="button" onClick={() => { setView('signup'); setError(''); setMessage(''); }} className="text-primary-600 font-bold hover:underline">Sign Up</button></p>
                 )}
                 {view === 'signup' && (
                    <button type="button" onClick={handleSignupBack} className="text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 font-medium">
@@ -370,7 +424,7 @@ export const AuthScreen: React.FC = () => {
                    </button>
                 )}
                 {view === 'forgot' && (
-                   <button type="button" onClick={() => setView('login')} className="text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 font-medium">Back to Login</button>
+                   <button type="button" onClick={() => { setView('login'); setResetStep('email'); setError(''); setMessage(''); }} className="text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 font-medium">Back to Login</button>
                 )}
               </div>
             </form>

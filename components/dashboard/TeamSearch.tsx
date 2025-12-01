@@ -1,30 +1,40 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchStudents } from '../../services/data';
+import { fetchStudents, sendTeamRequest, fetchSentTeamRequests } from '../../services/data';
 import { computeMatchScore } from '../../lib/matchmaking';
 import { UserProfile, MatchResult, StudentProfile } from '../../types';
-import { Search, Filter, UserPlus, Zap, Check } from 'lucide-react';
+import { Search, Filter, UserPlus, Zap, Check, Clock, Award } from 'lucide-react';
 
 export const TeamSearch: React.FC = () => {
     const { user } = useAuth();
     const [allStudents, setAllStudents] = useState<StudentProfile[]>([]);
     const [filteredResults, setFilteredResults] = useState<MatchResult[]>([]);
     const [loading, setLoading] = useState(true);
+    const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [skillFilter, setSkillFilter] = useState('');
     const [interestFilter, setInterestFilter] = useState('');
     const [minXp, setMinXp] = useState<number>(0);
-    const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const data = await fetchStudents();
+            const [data, reqs] = await Promise.all([
+                fetchStudents(),
+                user ? fetchSentTeamRequests(user.id) : Promise.resolve([])
+            ]);
+
             // Exclude current user and non-students
             const others = data.filter(u => u.id !== user?.id && u.role === 'student') as StudentProfile[];
             setAllStudents(others);
+            
+            // Mark pending requests
+            const pendingIds = reqs.map(r => r.receiverId);
+            setSentRequests(new Set(pendingIds));
+            
             setLoading(false);
         };
         load();
@@ -76,17 +86,27 @@ export const TeamSearch: React.FC = () => {
 
     }, [user, allStudents, searchTerm, skillFilter, interestFilter, minXp]);
 
-    const handleInvite = (userId: string) => {
-        // Simulate API call
-        setInvitedUsers(prev => new Set(prev).add(userId));
+    const handleInvite = async (candidateId: string) => {
+        if (!user || user.role !== 'student') return;
+        try {
+            await sendTeamRequest(user as StudentProfile, candidateId);
+            setSentRequests(prev => {
+                const newSet = new Set(prev);
+                newSet.add(candidateId);
+                return newSet;
+            });
+        } catch (error) {
+            console.error(error);
+            alert("Could not send request or request already pending.");
+        }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Finding talent...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Finding talent...</div>;
 
     return (
         <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                <h3 className="text-xl font-bold mb-4 flex items-center">
+                <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-white">
                     <Search className="mr-2 text-primary-600" /> Find Teammates
                 </h3>
                 
@@ -96,119 +116,131 @@ export const TeamSearch: React.FC = () => {
                         <input 
                             type="text" 
                             placeholder="Search name or bio..." 
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none"
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none text-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     </div>
 
-                    {/* Filter Skill */}
+                    {/* Filter Skills */}
                     <div className="relative">
                         <input 
                             type="text" 
-                            placeholder="Filter by skill (e.g. React)" 
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none"
+                            placeholder="Filter by skill..." 
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none text-sm"
                             value={skillFilter}
                             onChange={(e) => setSkillFilter(e.target.value)}
                         />
-                        <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <Filter className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     </div>
 
-                    {/* Filter Interest */}
+                    {/* Filter Interests */}
                     <div className="relative">
                         <input 
                             type="text" 
-                            placeholder="Filter by interest (e.g. AI)" 
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none"
+                            placeholder="Filter by interest..." 
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none text-sm"
                             value={interestFilter}
                             onChange={(e) => setInterestFilter(e.target.value)}
                         />
-                        <Zap className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <Zap className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     </div>
 
-                     {/* Min XP */}
-                     <div>
+                    {/* Min XP */}
+                    <div>
                         <select 
-                            className="w-full px-4 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none"
+                            className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 outline-none text-sm appearance-none cursor-pointer"
                             value={minXp}
                             onChange={(e) => setMinXp(Number(e.target.value))}
                         >
-                            <option value={0}>Any XP Level</option>
-                            <option value={100}>100+ XP</option>
-                            <option value={300}>300+ XP</option>
+                            <option value={0}>Any Experience Level</option>
+                            <option value={200}>200+ XP</option>
                             <option value={500}>500+ XP</option>
-                            <option value={1000}>1000+ XP</option>
+                            <option value={1000}>1000+ XP (Expert)</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredResults.length > 0 ? (
-                    filteredResults.map(({ user: candidate, score }) => {
-                        const isInvited = invitedUsers.has(candidate.id);
-                        return (
-                            <div key={candidate.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-3">
-                                    <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${score > 70 ? 'bg-green-100 text-green-700' : score > 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                                        {score}% Match
-                                    </span>
-                                </div>
+                {filteredResults.map(({ user: student, score }) => {
+                    const isSent = sentRequests.has(student.id);
+                    return (
+                        <div key={student.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all relative overflow-hidden group">
+                            {/* Match Score Badge */}
+                            <div className="absolute top-0 right-0 p-2 z-10">
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold shadow-sm ${
+                                    score >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                                    score >= 50 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                }`}>
+                                    {score}% Match
+                                </span>
+                            </div>
 
-                                <div className="flex items-center gap-4 mb-4">
-                                    <img src={candidate.photoURL} alt={candidate.name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700" />
-                                    <div>
-                                        <h4 className="font-bold text-lg">{candidate.name}</h4>
-                                        <p className="text-xs text-primary-600 font-medium">Lvl {candidate.level} • {candidate.xp} XP</p>
+                            <div className="flex items-center gap-4 mb-4">
+                                <img 
+                                    src={student.photoURL} 
+                                    className="w-16 h-16 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700" 
+                                    alt={student.name} 
+                                />
+                                <div>
+                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white leading-tight">{student.name}</h4>
+                                    <div className="flex items-center text-xs text-primary-600 dark:text-primary-400 font-medium mt-1">
+                                        <Award size={12} className="mr-1" />
+                                        Lvl {student.level}
                                     </div>
                                 </div>
-
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 h-10 line-clamp-2">{candidate.bio}</p>
-
-                                <div className="flex flex-wrap gap-2 mb-6">
-                                    {candidate.skills.slice(0, 3).map((skill, i) => (
-                                        <span key={i} className="px-2 py-1 bg-gray-50 dark:bg-gray-700 text-xs rounded text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-600">
-                                            {skill}
-                                        </span>
-                                    ))}
-                                    {candidate.skills.length > 3 && <span className="text-xs text-gray-400 self-center">+{candidate.skills.length - 3}</span>}
-                                </div>
-
-                                <button 
-                                    onClick={() => handleInvite(candidate.id)}
-                                    disabled={isInvited}
-                                    className={`w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center transition-colors ${
-                                        isInvited 
-                                        ? 'bg-green-50 text-green-600 border border-green-200 cursor-default' 
-                                        : 'bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:hover:bg-primary-900/50'
-                                    }`}
-                                >
-                                    {isInvited ? (
-                                        <>
-                                            <Check size={16} className="mr-2" /> Invited
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserPlus size={16} className="mr-2" /> Invite to Team
-                                        </>
-                                    )}
-                                </button>
                             </div>
-                        );
-                    })
-                ) : (
-                    <div className="col-span-full text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-dashed border-2 border-gray-200 dark:border-gray-700">
-                        <p>No students found matching your filters.</p>
-                        <button 
-                            onClick={() => { setSearchTerm(''); setSkillFilter(''); setInterestFilter(''); setMinXp(0); }}
-                            className="mt-2 text-primary-600 font-medium hover:underline"
-                        >
-                            Clear Filters
-                        </button>
-                    </div>
-                )}
+
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 h-10">
+                                {student.bio || "No bio provided."}
+                            </p>
+
+                            <div className="space-y-3 mb-6">
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Top Skills</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {student.skills.slice(0, 3).map(s => (
+                                            <span key={s} className="px-2 py-1 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 text-xs rounded border border-gray-100 dark:border-gray-600">
+                                                {s}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => !isSent && handleInvite(student.id)}
+                                disabled={isSent}
+                                className={`w-full py-2.5 rounded-lg font-bold text-sm flex items-center justify-center transition-all ${
+                                    isSent 
+                                    ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 cursor-default' 
+                                    : 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-600/20'
+                                }`}
+                            >
+                                {isSent ? (
+                                    <>
+                                        <Check size={18} className="mr-2" /> Request Sent
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus size={18} className="mr-2" /> Send Team Request
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
+            
+            {filteredResults.length === 0 && (
+                <div className="text-center py-20 opacity-50">
+                    <Search className="mx-auto h-12 w-12 mb-4" />
+                    <p className="text-lg font-medium">No students found matching your criteria.</p>
+                </div>
+            )}
         </div>
     );
 };

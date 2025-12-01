@@ -10,7 +10,8 @@ import { OrganizerDashboard } from './components/dashboard/OrganizerDashboard';
 import { ProfessionalDashboard } from './components/dashboard/ProfessionalDashboard';
 import { HackathonList } from './components/dashboard/HackathonList';
 import { ChatRoom } from './components/chat/ChatRoom';
-import { Role } from './types';
+import { Role, StudentProfile } from './types';
+import { Users, AlertCircle } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole?: string }> = ({ children, allowedRole }) => {
   const { user, loading } = useAuth();
@@ -43,6 +44,37 @@ const RedirectToRole: React.FC = () => {
     }
 }
 
+// Wrapper for Team Chat to handle dynamic Team ID
+const StudentTeamView: React.FC = () => {
+    const { user } = useAuth();
+    const student = user as StudentProfile;
+    const teamId = student?.teamId;
+
+    if (!teamId) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[600px] bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 text-center animate-fade-in">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                    <Users size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Team Yet</h3>
+                <p className="text-gray-500 max-w-md mb-6">You haven't joined a team yet. Go to the dashboard to find teammates or wait for invitations!</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[600px] animate-fade-in">
+             <div className="p-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-gray-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-purple-500"></div>
+                <Users size={48} className="mb-4 text-primary-200 dark:text-gray-700" />
+                <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1">Team Management</h3>
+                <p className="text-sm text-center px-8">Manage roles, tasks, and project details here.</p>
+             </div>
+             <ChatRoom roomId={teamId} />
+        </div>
+    );
+};
+
 const AppRoutes = () => {
     const { user } = useAuth();
 
@@ -68,10 +100,7 @@ const AppRoutes = () => {
                 } />
                 <Route path="/team" element={
                     <ProtectedRoute allowedRole="student">
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[600px]">
-                             <div className="p-4 bg-white dark:bg-gray-800 rounded shadow flex items-center justify-center text-gray-500">Team Management UI</div>
-                             <ChatRoom roomId="demo-room" />
-                         </div>
+                         <StudentTeamView />
                     </ProtectedRoute>
                 } />
 
