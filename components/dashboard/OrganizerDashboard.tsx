@@ -1,10 +1,13 @@
+
 import React, { useState } from 'react';
 import { Plus, Users, MessageSquare, BarChart, X, Edit, Target, Globe, Wand2 } from 'lucide-react';
 import { ChatRoom } from '../chat/ChatRoom';
 import { MOCK_HACKATHONS, addHackathon, updateHackathon } from '../../services/data';
 import { generateHackathonDescription } from '../../services/geminiService';
+import { useAuth } from '../../context/AuthContext';
 
 export const OrganizerDashboard: React.FC = () => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('active');
     const [showPostForm, setShowPostForm] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -12,8 +15,33 @@ export const OrganizerDashboard: React.FC = () => {
     const [formData, setFormData] = useState({ title: '', date: '', location: '', description: '', themes: '', website: '' });
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Filter hackathons relevant to the current view.
+    // NOTE: The request says "All other hackathons should remain visible but NOT editable". 
+    // So we use MOCK_HACKATHONS (which is actually live DB data now) for the list.
+    // However, MOCK_HACKATHONS import is actually a function call in data.ts context if we were using it as live.
+    // But data.ts exports MOCK_HACKATHONS as a constant array which is the INITIAL seed.
+    // Ideally we should use fetchHackathons() but for this component structure let's use the exported constant 
+    // or better, fetch properly. But based on existing code structure in the prompt, 
+    // let's assume MOCK_HACKATHONS is being treated as the source or we should fetch.
+    // To be safe and consistent with previous "persistence" fix, we should read from DB.
+    // But since this is a functional component update, I'll stick to the existing import pattern 
+    // BUT I will create a wrapper to force re-render or just assume data.ts handles it.
+    // Wait, MOCK_HACKATHONS in data.ts is just an array. If we want real data we should use fetchHackathons.
+    // The previous component code used MOCK_HACKATHONS directly. 
+    // I will switch to using a state-based approach fetching from `fetchHackathons` to ensure we see updates.
+
+    const [hackathons, setHackathons] = useState(MOCK_HACKATHONS);
+
+    // Refresh hackathons on load or update
+    React.useEffect(() => {
+        import('../../services/data').then(mod => {
+            mod.fetchHackathons().then(setHackathons);
+        });
+    }, [showPostForm]); // Refresh when form closes
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user) return;
         
         const themesArray = formData.themes.split(',').map(t => t.trim()).filter(t => t);
 
@@ -34,10 +62,11 @@ export const OrganizerDashboard: React.FC = () => {
                 location: formData.location,
                 description: formData.description,
                 image: `https://picsum.photos/400/200?random=${Date.now()}`,
-                organizerId: 'current-user',
+                organizerId: user.id, // Set createdBy to current user
                 participants: 0,
                 themes: themesArray,
-                website: formData.website
+                website: formData.website,
+                registrations: []
             });
             alert('Hackathon Posted Successfully!');
         }
@@ -46,6 +75,10 @@ export const OrganizerDashboard: React.FC = () => {
         setIsEditing(false);
         setEditId(null);
         setFormData({ title: '', date: '', location: '', description: '', themes: '', website: '' });
+        
+        // Refresh list
+        const latest = await import('../../services/data').then(m => m.fetchHackathons());
+        setHackathons(latest);
     };
 
     const handleEdit = (hackathon: any) => {
@@ -155,21 +188,25 @@ export const OrganizerDashboard: React.FC = () => {
                         <Users className="mr-2" />
                         <h3 className="font-semibold">Total Participants</h3>
                     </div>
-                    <p className="text-3xl font-bold">2,450</p>
+                    <p className="text-3xl font-bold">
+                        {hackathons.filter(h => h.organizerId === user?.id).reduce((acc, curr) => acc + (curr.participants || 0), 0)}
+                    </p>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center text-green-600 mb-2">
                         <BarChart className="mr-2" />
-                        <h3 className="font-semibold">Submission Rate</h3>
+                        <h3 className="font-semibold">Your Events</h3>
                     </div>
-                    <p className="text-3xl font-bold">78%</p>
+                    <p className="text-3xl font-bold">{hackathons.filter(h => h.organizerId === user?.id).length}</p>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center text-purple-600 mb-2">
                         <MessageSquare className="mr-2" />
-                        <h3 className="font-semibold">Active Discussions</h3>
+                        <h3 className="font-semibold">Registrations</h3>
                     </div>
-                    <p className="text-3xl font-bold">12</p>
+                    <p className="text-3xl font-bold">
+                         {hackathons.filter(h => h.organizerId === user?.id).reduce((acc, curr) => acc + (curr.registrations?.length || 0), 0)}
+                    </p>
                 </div>
             </div>
 
@@ -187,25 +224,31 @@ export const OrganizerDashboard: React.FC = () => {
                     <div className="p-6 flex-1">
                         {activeTab === 'active' ? (
                             <div className="space-y-4">
-                                {MOCK_HACKATHONS.slice(0, 3).map(h => (
-                                    <div key={h.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 group">
-                                        <div>
-                                            <p className="font-bold">{h.title}</p>
-                                            <div className="flex gap-2 text-xs text-gray-500 mt-1">
-                                                <span>{h.participants} participants</span>
-                                                {h.themes && h.themes.length > 0 && (
-                                                    <span>• {h.themes[0]}</span>
-                                                )}
+                                {hackathons.map(h => {
+                                    const isOwner = h.organizerId === user?.id;
+                                    return (
+                                        <div key={h.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 group">
+                                            <div>
+                                                <p className="font-bold">{h.title}</p>
+                                                <div className="flex gap-2 text-xs text-gray-500 mt-1">
+                                                    <span>{h.participants} participants</span>
+                                                    {h.themes && h.themes.length > 0 && (
+                                                        <span>• {h.themes[0]}</span>
+                                                    )}
+                                                    {!isOwner && <span className="text-gray-400 italic">• View Only</span>}
+                                                </div>
                                             </div>
+                                            {isOwner && (
+                                                <button 
+                                                    onClick={() => handleEdit(h)}
+                                                    className="text-xs px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full hover:bg-primary-50 dark:hover:bg-primary-900/50 hover:text-primary-600 transition-colors flex items-center"
+                                                >
+                                                    <Edit size={12} className="mr-1" /> Edit
+                                                </button>
+                                            )}
                                         </div>
-                                        <button 
-                                            onClick={() => handleEdit(h)}
-                                            className="text-xs px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full hover:bg-primary-50 dark:hover:bg-primary-900/50 hover:text-primary-600 transition-colors flex items-center"
-                                        >
-                                            <Edit size={12} className="mr-1" /> Edit
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : null}
                     </div>

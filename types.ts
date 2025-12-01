@@ -52,6 +52,17 @@ export interface ProfessionalProfile extends BaseProfile {
 
 export type UserProfile = StudentProfile | OrganizerProfile | ProfessionalProfile;
 
+export interface Registration {
+  name: string;
+  email: string;
+  phone: string;
+  collegeCompany: string;
+  city: string;
+  participationType: 'Individual' | 'Team';
+  teamName?: string;
+  timestamp: number;
+}
+
 export interface Hackathon {
   id: string;
   title: string;
@@ -59,10 +70,11 @@ export interface Hackathon {
   location: string;
   description: string;
   image: string;
-  organizerId: string;
+  organizerId: string; // This acts as the "createdBy" field
   participants: number;
   themes?: string[];
   website?: string;
+  registrations?: Registration[];
 }
 
 export interface ChatMessage {
